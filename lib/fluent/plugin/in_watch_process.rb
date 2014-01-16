@@ -45,6 +45,7 @@ module Fluent
       @lookup_user = @lookup_user.gsub(' ', '').split(',') unless @lookup_user.nil?
       @interval = Config.time_value(@interval)
       @hostname = `#{@hostname_command}`.chomp
+      $log.info "watch_process: polling start. :tag=>#{@tag} :lookup_user=>#{@lookup_user} :interval=>#{@interval} :command=>#{@command}"
     end
 
     def start
