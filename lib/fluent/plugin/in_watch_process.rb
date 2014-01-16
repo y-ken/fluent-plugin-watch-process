@@ -60,7 +60,7 @@ module Fluent
       loop do
         io = IO.popen(@command, 'r')
         io.gets
-        while result = ps.gets
+        while result = io.gets
           values = result.chomp.strip.split(/\s+/, @keys.size + 4)
           time = Time.parse(values[0...5].join(' '))
           data = Hash[
