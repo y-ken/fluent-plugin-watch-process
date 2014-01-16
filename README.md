@@ -13,8 +13,8 @@ Fluentd Input plugin to collect process information via ps command.
   * determine too long running task
 
 * output destination example
-  * Elasticsearch + Kibana to visualize statistics.
-  * aggregate log and save each host into AWS S3.
+  * Elasticsearch + Kibana to visualize statistics. Example: [example1.conf](https://github.com/y-ken/fluent-plugin-watch-process/blob/master/example1.conf)
+  * save process information as audit log into AWS S3 which filename isolated by hostname. Example: [example2.conf](https://github.com/y-ken/fluent-plugin-watch-process/blob/master/example2.conf)
 
 ## Installation
 
