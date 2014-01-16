@@ -58,10 +58,10 @@ module Fluent
 
     def run
       loop do
-        ps = IO.popen(@command, 'r')
-        ps.gets
-        while l = ps.gets
-          values = l.chomp.strip.split(/\s+/, 16)
+        io = IO.popen(@command, 'r')
+        io.gets
+        while result = ps.gets
+          values = result.chomp.strip.split(/\s+/, @keys.size + 4)
           time = Time.parse(values[0...5].join(' '))
           data = Hash[
             @keys.zip([time.to_s, values.values_at(5..15)].flatten).map do |k,v|
@@ -74,6 +74,7 @@ module Fluent
           tag = @tag.gsub(/(\${[a-z]+}|__[A-Z]+__)/, get_placeholder)
           Engine.emit(tag, Engine.now, data)
         end
+        io.close
         sleep @interval
       end
     end
