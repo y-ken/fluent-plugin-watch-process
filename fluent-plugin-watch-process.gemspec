@@ -7,7 +7,7 @@ Gem::Specification.new do |s|
   s.authors     = ["Kentaro Yoshida"]
   s.email       = ["y.ken.studio@gmail.com"]
   s.homepage    = "https://github.com/y-ken/fluent-plugin-watch-process"
-  s.summary     = %q{Fluentd Input plugin to collect process information via ps command.}
+  s.summary     = %q{Fluentd Input plugin to collect continual process information via ps command. It is useful for cron/barch process monitoring.}
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
