@@ -61,10 +61,11 @@ module Fluent
         io = IO.popen(@command, 'r')
         io.gets
         while result = io.gets
-          values = result.chomp.strip.split(/\s+/, @keys.size + 4)
-          time = Time.parse(values[0...5].join(' '))
+          result.match(/(?<lstart>(^\w+ \w+ \d+ \d\d:\d\d:\d\d \d+))/)
+          lstart = Time.parse($~[:lstart])
+          values = result.sub($~[:lstart], '').chomp.strip.split(/\s+/, @keys.size - 1)
           data = Hash[
-            @keys.zip([time.to_s, values.values_at(5..15)].flatten).map do |k,v|
+            @keys.zip([lstart.to_s, values].reject(&:nil?).flatten).map do |k,v|
               v = Converters[@types_map[k]].call(v) if @types_map.include?(k)
               [k,v]
             end
