@@ -7,11 +7,10 @@ class WatchProcessInputTest < Test::Unit::TestCase
 
   CONFIG = %[
     tag          input.watch_process
-    lookup_user  apache, mycron
   ]
 
-  def create_driver(conf=CONFIG,tag='test')
-    Fluent::Test::OutputTestDriver.new(Fluent::WatchProcessInput, tag).configure(conf)
+  def create_driver(conf = CONFIG)
+    Fluent::Test::InputTestDriver.new(Fluent::WatchProcessInput).configure(conf)
   end
 
   def test_configure
@@ -27,4 +26,3 @@ class WatchProcessInputTest < Test::Unit::TestCase
     assert_equal ['apache', 'mycron'], d.instance.lookup_user
   end
 end
-
