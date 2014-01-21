@@ -1,3 +1,5 @@
+require 'fluent/mixin/rewrite_tag_name'
+
 module Fluent
   class WatchProcessInput < Fluent::Input
     Plugin.register_input('watch_process', self)
@@ -9,6 +11,11 @@ module Fluent
     config_param :interval, :string, :default => '5s'
     config_param :lookup_user, :string, :default => nil
     config_param :hostname_command, :string, :default => 'hostname'
+
+    include Fluent::HandleTagNameMixin
+    include Fluent::Mixin::RewriteTagName
+    config_set_default :enable_placeholder_upcase, true
+    config_set_default :enable_placeholder_hostname, true
 
     DEFAULT_KEYS = %w(start_time user pid parent_pid cpu_time cpu_percent memory_percent mem_rss mem_size state proc_name command)
     DEFAULT_TYPES = %w(pid:integer parent_pid:integer cpu_percent:float memory_percent:float mem_rss:integer mem_size:integer)
@@ -47,7 +54,6 @@ module Fluent
       @types_map = Hash[types.map{|v| v.split(':')}]
       @lookup_user = @lookup_user.gsub(' ', '').split(',') unless @lookup_user.nil?
       @interval = Config.time_value(@interval)
-      @hostname = `#{@hostname_command}`.chomp
       $log.info "watch_process: polling start. :tag=>#{@tag} :lookup_user=>#{@lookup_user} :interval=>#{@interval} :command=>#{@command}"
     end
 
@@ -79,8 +85,9 @@ module Fluent
           ]
           data['elapsed_time'] = (Time.now - Time.parse(data['start_time'])).to_i if data['start_time']
           next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
-          tag = @tag.gsub(/(\${[a-z]+}|__[A-Z]+__)/, get_placeholder)
-          Engine.emit(tag, Engine.now, data)
+          emit_tag = tag.dup
+          filter_record(emit_tag, Engine.now, data)
+          Engine.emit(emit_tag, Engine.now, data)
         end
         io.close
         sleep @interval
@@ -115,12 +122,5 @@ module Fluent
         OS.unix? and not OS.mac?
       end
     end
-
-    def get_placeholder
-      return {
-        '__HOSTNAME__' => @hostname,
-        '${hostname}' => @hostname,
-      }
-    end    
   end
 end
