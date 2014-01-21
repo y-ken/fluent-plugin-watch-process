@@ -67,10 +67,10 @@ module Fluent
           keys_size = @keys.size
           if result =~ /(?<lstart>(^\w+ \w+ \d+ \d\d:\d\d:\d\d \d+))/
             lstart = Time.parse($~[:lstart])
-            values = result.sub($~[:lstart], '')
+            result = result.sub($~[:lstart], '')
             keys_size -= 1
           end
-          values = values.chomp.strip.split(/\s+/, keys_size)
+          values = result.chomp.strip.split(/\s+/, keys_size)
           data = Hash[
             @keys.zip([lstart.to_s, values].reject(&:empty?).flatten).map do |k,v|
               v = Converters[@types_map[k]].call(v) if @types_map.include?(k)
