@@ -65,7 +65,7 @@ module Fluent
         io.gets
         while result = io.gets
           keys_size = @keys.size
-          if result =~ /(?<lstart>(^\w+ \w+ \d+ \d\d:\d\d:\d\d \d+))/
+          if result =~ /(?<lstart>(^\w+\s+\w+\s+\d+\s+\d\d:\d\d:\d\d \d+))/
             lstart = Time.parse($~[:lstart])
             result = result.sub($~[:lstart], '')
             keys_size -= 1
