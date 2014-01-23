@@ -16,13 +16,9 @@ module Fluent
     DEFAULT_TYPES = "pid:integer,parent_pid:integer,cpu_percent:float,memory_percent:float,mem_rss:integer,mem_size:integer"
 
     include Fluent::HandleTagNameMixin
-
     include Fluent::Mixin::RewriteTagName
-    config_set_default :enable_placeholder_upcase, true
-    config_set_default :enable_placeholder_hostname, true
-
     include Fluent::Mixin::TypeConverter
-    config_param :types, :string, :default => DEFAULT_TYPES
+    config_set_default :types, DEFAULT_TYPES
 
     def initialize
       super
