@@ -1,4 +1,4 @@
-fluent-plugin-watch-process [![Build Status](https://travis-ci.org/y-ken/fluent-plugin-watch-process.png?branch=master)](https://travis-ci.org/y-ken/fluent-plugin-watch-process)
+fluent-plugin-watch-process, a plugin for [Fluentd](http://fluentd.org) [![Build Status](https://travis-ci.org/y-ken/fluent-plugin-watch-process.png?branch=master)](https://travis-ci.org/y-ken/fluent-plugin-watch-process)
 =====================
 
 ## Overview
