@@ -21,7 +21,6 @@ class WatchProcessInputTest < Test::Unit::TestCase
       tag          input.watch_process
       lookup_user  apache, mycron
     ]
-    d.instance.inspect
     assert_equal 'input.watch_process', d.instance.tag
     assert_equal ['apache', 'mycron'], d.instance.lookup_user
   end
