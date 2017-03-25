@@ -1,3 +1,4 @@
+require "fluent/input"
 require 'fluent/mixin/rewrite_tag_name'
 require 'fluent/mixin/type_converter'
 
