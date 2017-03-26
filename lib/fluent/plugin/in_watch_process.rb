@@ -61,7 +61,7 @@ module Fluent
           next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
           emit_tag = tag.dup
           filter_record(emit_tag, Engine.now, data)
-          Engine.emit(emit_tag, Engine.now, data)
+          router.emit(emit_tag, Engine.now, data)
         end
         io.close
         sleep @interval
