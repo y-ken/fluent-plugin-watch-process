@@ -25,7 +25,10 @@ install with gem or fluent-gem command as:
 $ gem install fluent-plugin-watch-process
 
 # for td-agent
-$ sudo /usr/lib64/fluent/ruby/bin/fluent-gem install fluent-plugin-watch-process
+$ sudo /usr/lib64/fluent/ruby/bin/fluent-gem install fluent-plugin-watch-process -v 0.6.0
+
+# for td-agent2 (recommend)
+$ sudo td-agent-gem install fluent-plugin-watch-process -v 0.6.0
 ```
 
 ## Configuration
@@ -36,14 +39,14 @@ It is a quick sample to output log to `/var/log/td-agent/td-agent.log` with td-a
 
 `````
 <source>
-  type watch_process
+  @type        watch_process
   tag          debug.batch.${hostname}  # Required
   lookup_user  batchuser                # Optional
   interval     10s                      # Optional (default: 5s)
 </source>
 
 <match debug.**>
-  type stdout
+  @type        stdout
 </match>
 `````
 
