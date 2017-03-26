@@ -16,7 +16,9 @@ Gem::Specification.new do |s|
 
   # specify any dependencies:
   s.add_development_dependency "rake"
-  s.add_runtime_dependency "fluentd"
+  s.add_development_dependency "test-unit", ">= 3.1.0"
+  s.add_development_dependency "appraisal"
+  s.add_runtime_dependency "fluentd", ">= 0.10.58"
   s.add_runtime_dependency "fluent-mixin-rewrite-tag-name"
   s.add_runtime_dependency "fluent-mixin-type-converter"
 end
