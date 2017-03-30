@@ -25,10 +25,10 @@ install with gem or fluent-gem command as:
 $ gem install fluent-plugin-watch-process
 
 # for td-agent
-$ sudo /usr/lib64/fluent/ruby/bin/fluent-gem install fluent-plugin-watch-process -v 0.1.0
+$ sudo /usr/lib64/fluent/ruby/bin/fluent-gem install fluent-plugin-watch-process -v 0.1.1
 
 # for td-agent2 (recommend)
-$ sudo td-agent-gem install fluent-plugin-watch-process -v 0.1.0
+$ sudo td-agent-gem install fluent-plugin-watch-process -v 0.1.1
 ```
 
 ## Configuration
