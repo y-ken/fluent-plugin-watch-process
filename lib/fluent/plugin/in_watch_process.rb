@@ -33,7 +33,7 @@ module Fluent
       @keys = @keys.nil? ? DEFAULT_KEYS : @keys.to_s.gsub(' ', '').split(',')
       @lookup_user = @lookup_user.gsub(' ', '').split(',') unless @lookup_user.nil?
       @interval = Config.time_value(@interval)
-      $log.info "watch_process: polling start. :tag=>#{@tag} :lookup_user=>#{@lookup_user} :interval=>#{@interval} :command=>#{@command}"
+      log.info "watch_process: polling start. :tag=>#{@tag} :lookup_user=>#{@lookup_user} :interval=>#{@interval} :command=>#{@command}"
     end
 
     def start
@@ -60,14 +60,14 @@ module Fluent
           data['elapsed_time'] = (Time.now - Time.parse(data['start_time'])).to_i if data['start_time']
           next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
           emit_tag = tag.dup
-          filter_record(emit_tag, Engine.now, data)
-          router.emit(emit_tag, Engine.now, data)
+          filter_record(emit_tag, Fluent::Engine.now, data)
+          router.emit(emit_tag, Fluent::Engine.now, data)
         end
         io.close
         sleep @interval
       end
       rescue StandardError => e
-        $log.error "watch_process: error has occured. #{e.message}"
+        log.error "watch_process: error has occured. #{e.message}"
     end
 
     def get_ps_command
