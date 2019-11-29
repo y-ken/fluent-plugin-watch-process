@@ -10,11 +10,4 @@ before_install:
 
 gemfile:
   - Gemfile
-  - gemfiles/fluentd_v0.12.gemfile
   - gemfiles/fluentd_v0.14.gemfile
-
-matrix:
-  include:
-    - rvm: 2.0.0
-      gemfile: gemfiles/fluentd_v0.12.gemfile
-
