@@ -46,23 +46,26 @@ module Fluent::Plugin
 
     def on_timer
       io = IO.popen(@command, 'r')
-      io.gets
-      while result = io.gets
-        keys_size = @keys.size
-        if result =~ /(?<lstart>(^\w+\s+\w+\s+\d+\s+\d\d:\d\d:\d\d \d+))/
-          lstart = Time.parse($~[:lstart])
-          result = result.sub($~[:lstart], '')
-          keys_size -= 1
+      begin
+        io.gets
+        while result = io.gets
+          keys_size = @keys.size
+          if result =~ /(?<lstart>(^\w+\s+\w+\s+\d+\s+\d\d:\d\d:\d\d \d+))/
+            lstart = Time.parse($~[:lstart])
+            result = result.sub($~[:lstart], '')
+            keys_size -= 1
+          end
+          values = [lstart.to_s, result.chomp.strip.split(/\s+/, keys_size)]
+          data = Hash[@keys.zip(values.reject(&:empty?).flatten)]
+          data['elapsed_time'] = (Time.now - Time.parse(data['start_time'])).to_i if data['start_time']
+          next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
+          emit_tag = tag.dup
+          filter_record(emit_tag, Fluent::Engine.now, data)
+          router.emit(emit_tag, Fluent::Engine.now, data)
         end
-        values = [lstart.to_s, result.chomp.strip.split(/\s+/, keys_size)]
-        data = Hash[@keys.zip(values.reject(&:empty?).flatten)]
-        data['elapsed_time'] = (Time.now - Time.parse(data['start_time'])).to_i if data['start_time']
-        next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
-        emit_tag = tag.dup
-        filter_record(emit_tag, Fluent::Engine.now, data)
-        router.emit(emit_tag, Fluent::Engine.now, data)
+      ensure
+        io.close
       end
-      io.close
     rescue StandardError => e
       log.error "watch_process: error has occured. #{e.message}"
     end
