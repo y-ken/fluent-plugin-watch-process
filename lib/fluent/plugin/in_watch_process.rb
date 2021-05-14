@@ -9,12 +9,11 @@ module Fluent::Plugin
 
     helpers :timer
 
-    DEFAULT_KEYS = %w(start_time user pid parent_pid cpu_time cpu_percent memory_percent mem_rss mem_size state proc_name command)
     DEFAULT_TYPES = "pid:integer,parent_pid:integer,cpu_percent:float,memory_percent:float,mem_rss:integer,mem_size:integer"
 
     config_param :tag, :string
     config_param :command, :string, :default => nil
-    config_param :keys, :array, :default => DEFAULT_KEYS
+    config_param :keys, :array, :default => nil
     config_param :interval, :time, :default => '5s'
     config_param :lookup_user, :array, :default => nil
     config_param :hostname_command, :string, :default => 'hostname'
@@ -31,8 +30,8 @@ module Fluent::Plugin
     def configure(conf)
       super
 
-      @command = @command || get_ps_command
-      log.info "watch_process: polling start. :tag=>#{@tag} :lookup_user=>#{@lookup_user} :interval=>#{@interval} :command=>#{@command}"
+      @watcher = Watcher.get_watcher(@keys, @command)
+      log.info "watch_process: polling start. :tag=>#{@tag} :lookup_user=>#{@lookup_user} :interval=>#{@interval} :command=>#{@watcher.command}"
     end
 
     def start
@@ -45,55 +44,123 @@ module Fluent::Plugin
     end
 
     def on_timer
-      io = IO.popen(@command, 'r')
-      begin
-        io.gets
-        while result = io.gets
-          keys_size = @keys.size
-          if result =~ /(?<lstart>(^\w+\s+\w+\s+\d+\s+\d\d:\d\d:\d\d \d+))/
-            lstart = Time.parse($~[:lstart])
-            result = result.sub($~[:lstart], '')
-            keys_size -= 1
-          end
-          values = [lstart.to_s, result.chomp.strip.split(/\s+/, keys_size)]
-          data = Hash[@keys.zip(values.reject(&:empty?).flatten)]
-          data['elapsed_time'] = (Time.now - Time.parse(data['start_time'])).to_i if data['start_time']
-          next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
-          emit_tag = tag.dup
-          filter_record(emit_tag, Fluent::Engine.now, data)
-          router.emit(emit_tag, Fluent::Engine.now, data)
-        end
-      ensure
-        io.close
+      @watcher.process do |data|
+        next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
+        emit_tag = tag.dup
+        filter_record(emit_tag, Fluent::Engine.now, data)
+        router.emit(emit_tag, Fluent::Engine.now, data)
       end
     rescue StandardError => e
       log.error "watch_process: error has occured. #{e.message}"
     end
 
-    def get_ps_command
-      if OS.linux?
-        "LANG=en_US.UTF-8 && ps -ewwo lstart,user:20,pid,ppid,time,%cpu,%mem,rss,sz,s,comm,cmd"
-      elsif OS.mac?
-        "LANG=en_US.UTF-8 && ps -ewwo lstart,user,pid,ppid,time,%cpu,%mem,rss,vsz,state,comm,command"
-      end
-    end
-
-    module OS
-      # ref. http://stackoverflow.com/questions/170956/how-can-i-find-which-operating-system-my-ruby-program-is-running-on
-      def OS.windows?
-        (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
+    module Watcher
+      def self.get_watcher(keys, command)
+        if OS.linux?
+          Linux.new(keys, command)
+        elsif OS.mac?
+          Mac.new(keys, command)
+        else
+          raise NotImplementedError, "This OS type is not supported."
+        end
       end
 
-      def OS.mac?
-       (/darwin/ =~ RUBY_PLATFORM) != nil
+      class Base
+        attr_reader :keys
+        attr_reader :command
+
+        def initialize(keys, command)
+          @keys = keys
+          @command = command
+        end
+
+        def parse_line(line)
+          raise NotImplementedError, "Need to override #{self.class}##{__method__}."
+        end
+
+        def process
+          io = open_and_get_io
+          begin
+            while result = io.gets
+              yield parse_line(result)
+            end
+          ensure
+            close_io(io)
+          end
+        end
+
+        def open_and_get_io
+          io = IO.popen(@command, 'r')
+          io.gets
+          io
+        end
+
+        def close_io(io)
+          io.close
+        end
+      end
+      private_constant :Base
+
+      class BaseUnixLike < Base
+        DEFAULT_KEYS = %w(start_time user pid parent_pid cpu_time cpu_percent memory_percent mem_rss mem_size state proc_name command)
+
+        def initialize(keys, command)
+          super(keys, command)
+          @keys = @keys || DEFAULT_KEYS
+        end
+
+        def parse_line(line)
+          keys_size = @keys.size
+
+          if line =~ /(?<lstart>(^\w+\s+\w+\s+\d+\s+\d\d:\d\d:\d\d \d+))/
+            lstart = Time.parse($~[:lstart])
+            line = line.sub($~[:lstart], '')
+            keys_size -= 1
+          end
+          values = [lstart.to_s, line.chomp.strip.split(/\s+/, keys_size)]
+          data = Hash[@keys.zip(values.reject(&:empty?).flatten)]
+          data['elapsed_time'] = (Time.now - Time.parse(data['start_time'])).to_i if data['start_time']
+
+          data
+        end
+      end
+      private_constant :BaseUnixLike
+
+      class Linux < BaseUnixLike
+        DEFAULT_COMMAND = "LANG=en_US.UTF-8 && ps -ewwo lstart,user:20,pid,ppid,time,%cpu,%mem,rss,sz,s,comm,cmd"
+
+        def initialize(keys, command)
+          super(keys, command)
+          @command = @command || DEFAULT_COMMAND
+        end
       end
 
-      def OS.unix?
-        !OS.windows?
+      class Mac < BaseUnixLike
+        DEFAULT_COMMAND = "LANG=en_US.UTF-8 && ps -ewwo lstart,user,pid,ppid,time,%cpu,%mem,rss,vsz,state,comm,command"
+
+        def initialize(keys, command)
+          super(keys, command)
+          @command = @command || DEFAULT_COMMAND
+        end
       end
 
-      def OS.linux?
-        OS.unix? and not OS.mac?
+      module OS
+        # ref. http://stackoverflow.com/questions/170956/how-can-i-find-which-operating-system-my-ruby-program-is-running-on
+        def self.windows?
+          (/cygwin|mswin|mingw|bccwin|wince|emx/ =~ RUBY_PLATFORM) != nil
+        end
+
+        def self.mac?
+         (/darwin/ =~ RUBY_PLATFORM) != nil
+        end
+
+        def self.unix?
+          !windows?
+        end
+
+        def self.linux?
+          unix? and not mac?
+        end
       end
     end
   end
