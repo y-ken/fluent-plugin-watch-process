@@ -55,19 +55,22 @@ module Fluent::Plugin
 
     def on_timer
       io = IO.popen(@command, 'r')
-      io.gets
-      while result = io.gets
-        if Fluent.windows?
-          data = @windows_watcher.parse_line(result)
-        else
-          data = parse_line(result)
+      begin
+        io.gets
+        while result = io.gets
+          if Fluent.windows?
+            data = @windows_watcher.parse_line(result)
+          else
+            data = parse_line(result)
+          end
+          next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
+          emit_tag = tag.dup
+          filter_record(emit_tag, Fluent::Engine.now, data)
+          router.emit(emit_tag, Fluent::Engine.now, data)
         end
-        next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
-        emit_tag = tag.dup
-        filter_record(emit_tag, Fluent::Engine.now, data)
-        router.emit(emit_tag, Fluent::Engine.now, data)
+      ensure
+        io.close
       end
-      io.close
     rescue StandardError => e
       log.error "watch_process: error has occured. #{e.message}"
     end
