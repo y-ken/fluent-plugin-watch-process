@@ -11,7 +11,14 @@ module Fluent::Plugin
     helpers :timer
 
     DEFAULT_KEYS = %w(start_time user pid parent_pid cpu_time cpu_percent memory_percent mem_rss mem_size state proc_name command)
-    DEFAULT_TYPES = "pid:integer,parent_pid:integer,cpu_percent:float,memory_percent:float,mem_rss:integer,mem_size:integer"
+    DEFAULT_TYPES = %w(
+      pid:integer
+      parent_pid:integer
+      cpu_percent:float
+      memory_percent:float
+      mem_rss:integer
+      mem_size:integer
+    ).join(",")
 
     config_param :tag, :string
     config_param :command, :string, :default => nil
