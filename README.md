@@ -68,14 +68,20 @@ $ tail -f /var/log/td-agent/td-agent.log
   * execute ps command with some options
   * [default] Linux: `LANG=en_US.UTF-8 && ps -ewwo lstart,user:20,pid,ppid,time,%cpu,%mem,rss,sz,s,comm,cmd`
   * [default] MacOSX: `LANG=en_US.UTF-8 && ps -ewwo lstart,user,pid,ppid,time,%cpu,%mem,rss,vsz,state,comm,command`
+  * [default] Windows: described in the next section, `About Windows`.
 
 * keys (Optional)
   * output record keys of the ps command results
-  * [default] start_time user pid parent_pid cpu_time cpu_percent memory_percent mem_rss mem_size state proc_name command
+  * [default] Linux, MacOSX: `start_time,user,pid,parent_pid,cpu_time,cpu_percent,memory_percent,mem_rss,mem_size,state,proc_name,command`
+    * need to modify `command` too if you modify this value.
+  * [default] Windows: `start_time,user,sid,pid,cpu_second,working_set,virtual_memory_size,handles,proc_name`
+    * in Windows only, you can fix this without fixing `command`, unless you specify a key other than the default.
+    * `user` key needs administrator privilege. You can exclude this to avoid needing administrator privilege.
 
 * types (Optional)
   * settings of converting types from string to integer/float.
-  * [default] pid:integer parent_pid:integer cpu_percent:float memory_percent:float mem_rss:integer mem_size:integer
+  * [default] Linux, MacOSX: `pid:integer,parent_pid:integer,cpu_percent:float,memory_percent:float,mem_rss:integer,mem_size:integer`
+  * [default] Windows: `sid:integer,pid:integer,cpu_second:float,working_set:integer,virtual_memory_size:integer,handles:integer`
 
 * interval (Optional)
   * execute interval time
@@ -89,6 +95,43 @@ $ tail -f /var/log/td-agent/td-agent.log
   * settings for tag placeholder, `${hostname}` and `__HOSTNAME__`. By default, it using long hostname.
   * to use short hostname, set `hostname -s` for this option on linux/mac.
   * [default] `hostname`
+
+### About Windows
+
+Default `command` in Windows below is complicated, but you can fix `keys` without fixing `command`, unless you specify a key other than the default.
+
+`````powershell
+powershell -command "Get-Process -IncludeUserName
+ | ?{$_.StartTime -ne $NULL -and $_.CPU -ne $NULL}
+ | Select-Object -Property StartTime,UserName,SessionId,Id,CPU,WorkingSet,VirtualMemorySize,HandleCount,ProcessName
+ | %{
+  $_.StartTime = $_.StartTime.ToString(
+  'ddd MMM dd HH:mm:ss yyyy',
+  [Globalization.CultureInfo]::GetCultureInfo('en-US').DateTimeFormat
+  );
+  return $_;
+} | ConvertTo-Csv -NoTypeInformation"
+`````
+
+Here are details of this default command.
+
+* `Get-Process -IncludeUserName`
+  * `Get-Process` powershell command takes `System.Diagnostics.Process` objects.
+  * `IncludeUserName` option is needed to take `UserName` (key:`user`).
+    * this needs administrator privilege.
+    * this will be omitted if `keys` does not contain `user`.
+* ` | ?{$_.StartTime -ne $NULL -and $_.CPU -ne $NULL}`
+  * this exlcludes some special processes that don't have some properties, such as the "Idle" process in Windows.
+* ` | Select-Object -Property ...`
+  * this takes the necessary parameters from `System.Diagnostics.Process` objects.
+  * `...` part will be automatically fixed by `keys`, unless you specify a key other than the default.
+* ` | %{$_.StartTime = ...; return $_;}`
+  * this fixes locale of `StartTime` value to `en-US`.
+  * note: in Windows, setting the "$env:Lang" environment variable is not effective in changing the format of the output.
+* ` | ConvertTo-Csv -NoTypeInformation`
+  * this formats objects to csv strings.
+  * currently, it is needed that `command` outputs the results in csv format.
+    * this is because white space delimiter is not suitable for Windows, in which empty values are often mixed.
 
 ## FAQ
 
