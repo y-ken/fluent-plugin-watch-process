@@ -104,13 +104,8 @@ Default `command` in Windows below is complicated, but you can fix `keys` withou
 powershell -command "Get-Process -IncludeUserName
  | ?{$_.StartTime -ne $NULL -and $_.CPU -ne $NULL}
  | Select-Object -Property StartTime,UserName,SessionId,Id,CPU,WorkingSet,VirtualMemorySize,HandleCount,ProcessName
- | %{
-  $_.StartTime = $_.StartTime.ToString(
-  'ddd MMM dd HH:mm:ss yyyy',
-  [Globalization.CultureInfo]::GetCultureInfo('en-US').DateTimeFormat
-  );
-  return $_;
-} | ConvertTo-Csv -NoTypeInformation"
+ | %{$_.StartTime = $_.StartTime.ToString('o'); return $_;}
+ | ConvertTo-Csv -NoTypeInformation"
 `````
 
 Here are details of this default command.
@@ -125,8 +120,8 @@ Here are details of this default command.
 * ` | Select-Object -Property ...`
   * this takes the necessary parameters from `System.Diagnostics.Process` objects.
   * `...` part will be automatically fixed by `keys`.
-* ` | %{$_.StartTime = ...; return $_;}`
-  * this fixes locale of `StartTime` value to `en-US`.
+* ` | %{$_.StartTime = $_.StartTime.ToString('o'); return $_;}`
+  * this fixes the format of `StartTime` value.
   * note: in Windows, setting the "$env:Lang" environment variable is not effective in changing the format of the output.
 * ` | ConvertTo-Csv -NoTypeInformation`
   * this formats objects to csv strings.

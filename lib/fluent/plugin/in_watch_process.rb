@@ -201,20 +201,13 @@ module Fluent::Plugin
         " | Select-Object -Property #{@keys.join(',')}"
       end
 
-      def pipe_fixing_locale(format: "ddd MMM dd HH:mm:ss yyyy", locale: "en-US")
+      def pipe_fixing_locale()
         # In Windows, setting the "$env:Lang" environment variable is not effective in changing the format of the output.
         # You can use "Datetime.ToString" method to change format of datetime values in for-each pipe.
         # Note: About "DateTime.ToString" method: https://docs.microsoft.com/en-us/dotnet/api/system.datetime.tostring
-        # Note: About "Custom date and time format strings": https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings
         return "" unless @keys.include?("StartTime")
 
-        " | %{
-          $_.StartTime = $_.StartTime.ToString(
-            '#{format}',
-            [Globalization.CultureInfo]::GetCultureInfo('#{locale}').DateTimeFormat
-          ); 
-          return $_;
-        }"
+        " | %{$_.StartTime = $_.StartTime.ToString('o'); return $_;}"
       end
 
       def pipe_formatting_output
