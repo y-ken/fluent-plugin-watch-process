@@ -74,14 +74,14 @@ $ tail -f /var/log/td-agent/td-agent.log
   * output record keys of the ps command results
   * [default] Linux, MacOSX: `start_time,user,pid,parent_pid,cpu_time,cpu_percent,memory_percent,mem_rss,mem_size,state,proc_name,command`
     * need to modify `command` too if you modify this value.
-  * [default] Windows: `start_time,user,sid,pid,cpu_second,working_set,virtual_memory_size,handles,proc_name`
-    * in Windows only, you can fix this without fixing `command`, unless you specify a key other than the default.
-    * `user` key needs administrator privilege. You can exclude this to avoid needing administrator privilege.
+  * [default] Windows: `StartTime,UserName,SessionId,Id,CPU,WorkingSet,VirtualMemorySize,HandleCount,ProcessName`
+    * in Windows only, you can fix this without fixing `command`. These keys can be specified from the properties of `System.Diagnostics.Process` object of `.NET`.
+    * `UserName` key needs administrator privilege. You can exclude this to avoid needing administrator privilege.
 
 * types (Optional)
   * settings of converting types from string to integer/float.
   * [default] Linux, MacOSX: `pid:integer,parent_pid:integer,cpu_percent:float,memory_percent:float,mem_rss:integer,mem_size:integer`
-  * [default] Windows: `sid:integer,pid:integer,cpu_second:float,working_set:integer,virtual_memory_size:integer,handles:integer`
+  * [default] Windows: `SessionId:integer,Id:integer,CPU:float,WorkingSet:integer,VirtualMemorySize:integer,HandleCount:integer`
 
 * interval (Optional)
   * execute interval time
@@ -117,14 +117,14 @@ Here are details of this default command.
 
 * `Get-Process -IncludeUserName`
   * `Get-Process` powershell command takes `System.Diagnostics.Process` objects.
-  * `IncludeUserName` option is needed to take `UserName` (key:`user`).
+  * `IncludeUserName` option is needed to take `UserName`.
     * this needs administrator privilege.
-    * this will be omitted if `keys` does not contain `user`.
+    * this will be omitted if `keys` does not contain `UserName`.
 * ` | ?{$_.StartTime -ne $NULL -and $_.CPU -ne $NULL}`
   * this exlcludes some special processes that don't have some properties, such as the "Idle" process in Windows.
 * ` | Select-Object -Property ...`
   * this takes the necessary parameters from `System.Diagnostics.Process` objects.
-  * `...` part will be automatically fixed by `keys`, unless you specify a key other than the default.
+  * `...` part will be automatically fixed by `keys`.
 * ` | %{$_.StartTime = ...; return $_;}`
   * this fixes locale of `StartTime` value to `en-US`.
   * note: in Windows, setting the "$env:Lang" environment variable is not effective in changing the format of the output.

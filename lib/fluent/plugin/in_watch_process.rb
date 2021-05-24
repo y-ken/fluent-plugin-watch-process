@@ -38,7 +38,7 @@ module Fluent::Plugin
     def configure(conf)
       super
 
-      @windows_watcher = WindowsWatcher.new(@keys, @command) if Fluent.windows?
+      @windows_watcher = WindowsWatcher.new(@keys, @command, @lookup_user) if Fluent.windows?
       @keys ||= Fluent.windows? ? @windows_watcher.keys : DEFAULT_KEYS
       @command ||= get_ps_command
       apply_default_types
@@ -67,10 +67,11 @@ module Fluent::Plugin
         while result = io.gets
           if Fluent.windows?
             data = @windows_watcher.parse_line(result)
+            next unless @windows_watcher.match_look_up_user?(data)
           else
             data = parse_line(result)
+            next unless match_look_up_user?(data)
           end
-          next unless @lookup_user.nil? || @lookup_user.include?(data['user'])
           emit_tag = tag.dup
           filter_record(emit_tag, Fluent::Engine.now, data)
           router.emit(emit_tag, Fluent::Engine.now, data)
@@ -95,6 +96,12 @@ module Fluent::Plugin
       data
     end
 
+    def match_look_up_user?(data)
+      return true if @lookup_user.nil?
+
+      @lookup_user.include?(data['user'])
+    end
+
     def get_ps_command
       if mac?
         "LANG=en_US.UTF-8 && ps -ewwo lstart,user,pid,ppid,time,%cpu,%mem,rss,vsz,state,comm,command"
@@ -110,35 +117,26 @@ module Fluent::Plugin
     end
 
     class WindowsWatcher
-      # Values are from the "System.Diagnostics.Process" object properties that can be taken by the "Get-Process" command.
+      # Keys are from the "System.Diagnostics.Process" object properties that can be taken by the "Get-Process" command.
       # You can check the all properties by the "(Get-Process)[0] | Get-Member" command.
-      DEFAULT_PARAMS = {
-        "start_time" => "StartTime",
-        "user" => "UserName",
-        "sid" => "SessionId",
-        "pid" => "Id",
-        "cpu_second" => "CPU",
-        "working_set" => "WorkingSet",
-        "virtual_memory_size" => "VirtualMemorySize",
-        "handles" => "HandleCount",
-        "proc_name" => "ProcessName",
-      }
+      DEFAULT_KEYS = %w(StartTime UserName SessionId Id CPU WorkingSet VirtualMemorySize HandleCount ProcessName)
 
       DEFAULT_TYPES = %w(
-        sid:integer
-        pid:integer
-        cpu_second:float
-        working_set:integer
-        virtual_memory_size:integer
-        handles:integer
+        SessionId:integer
+        Id:integer
+        CPU:float
+        WorkingSet:integer
+        VirtualMemorySize:integer
+        HandleCount:integer
       ).join(",")
 
       attr_reader :keys
       attr_reader :command
 
-      def initialize(keys, command)
-        @keys = keys || DEFAULT_PARAMS.keys
+      def initialize(keys, command, lookup_user)
+        @keys = keys || DEFAULT_KEYS
         @command = command || default_command
+        @lookup_user = lookup_user
       end
 
       def default_types
@@ -149,11 +147,17 @@ module Fluent::Plugin
         values = line.chomp.strip.parse_csv.map { |e| e ? e : "" }
         data = Hash[@keys.zip(values)]
 
-        unless data["start_time"].nil?
-          data["start_time"] = format_datetime(data["start_time"])
+        unless data["StartTime"].nil?
+          data["StartTime"] = format_datetime(data["StartTime"])
         end
 
         data
+      end
+
+      def match_look_up_user?(data)
+        return true if @lookup_user.nil?
+
+        @lookup_user.include?(data["UserName"])
       end
 
       def default_command
@@ -168,7 +172,7 @@ module Fluent::Plugin
       end
 
       def command_ps
-        if @keys.include?("user")
+        if @keys.include?("UserName")
           # The "IncludeUserName" option is needed to get the username, but this option requires Administrator privilege.
           "Get-Process -IncludeUserName"
         else
@@ -190,16 +194,11 @@ module Fluent::Plugin
       end
 
       def pipe_select_columns
-        columns = @keys.map { |key|
-          next unless DEFAULT_PARAMS.keys.include?(key)
-          DEFAULT_PARAMS[key]
-        }.compact
-
-        if columns.nil? || columns.empty?
+        if @keys.nil? || @keys.empty?
           raise "The 'keys' parameter is not specified correctly. [keys: #{@keys}]"
         end
 
-        " | Select-Object -Property #{columns.join(',')}"
+        " | Select-Object -Property #{@keys.join(',')}"
       end
 
       def pipe_fixing_locale(format: "ddd MMM dd HH:mm:ss yyyy", locale: "en-US")
@@ -207,7 +206,7 @@ module Fluent::Plugin
         # You can use "Datetime.ToString" method to change format of datetime values in for-each pipe.
         # Note: About "DateTime.ToString" method: https://docs.microsoft.com/en-us/dotnet/api/system.datetime.tostring
         # Note: About "Custom date and time format strings": https://docs.microsoft.com/en-us/dotnet/standard/base-types/custom-date-and-time-format-strings
-        return "" unless @keys.include?("start_time")
+        return "" unless @keys.include?("StartTime")
 
         " | %{
           $_.StartTime = $_.StartTime.ToString(

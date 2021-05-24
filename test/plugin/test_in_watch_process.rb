@@ -44,7 +44,7 @@ class WatchProcessInputTest < Test::Unit::TestCase
         tag input.watch_process
         interval 1s
       ]
-      default_keys = Fluent::Plugin::WatchProcessInput::WindowsWatcher::DEFAULT_PARAMS.keys
+      default_keys = Fluent::Plugin::WatchProcessInput::WindowsWatcher::DEFAULT_KEYS
 
       d.run(expect_records: 1, timeout: 10);
 
@@ -59,12 +59,12 @@ class WatchProcessInputTest < Test::Unit::TestCase
 
     def test_windows_customized
       omit "Only for Windows." unless Fluent.windows?
-      custom_keys = ["handles", "pid", "proc_name"]
+      custom_keys = ["PM", "Id", "UserProcessorTime", "Path"]
       d = create_driver %[
         tag input.watch_process
         interval 1s
         keys #{custom_keys.join(",")}
-        types pid:integer
+        types Id:integer
       ]
 
       d.run(expect_records: 1, timeout: 10);
@@ -76,8 +76,8 @@ class WatchProcessInputTest < Test::Unit::TestCase
       assert_equal "input.watch_process", tag
       assert time.is_a?(Fluent::EventTime)
       assert_equal custom_keys, record.keys
-      assert record["handles"].is_a?(String)
-      assert record["pid"].is_a?(Integer)
+      assert record["PM"].is_a?(String)
+      assert record["Id"].is_a?(Integer)
     end
 
     def test_windows_lookup
@@ -91,7 +91,7 @@ class WatchProcessInputTest < Test::Unit::TestCase
       assert d.events.size > 0
 
       tag, time, record = d.events[0]
-      lookup_user = record["user"]
+      lookup_user = record["UserName"]
 
       d = create_driver %[
         tag input.watch_process
@@ -103,7 +103,7 @@ class WatchProcessInputTest < Test::Unit::TestCase
       assert d.events.size > 0
 
       other_user_records = d.events.reject do |tag, time, record|
-        lookup_user.include?(record["user"])
+        lookup_user.include?(record["UserName"])
       end
 
       assert other_user_records.size == 0
