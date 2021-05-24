@@ -148,7 +148,9 @@ module Fluent::Plugin
         data = Hash[@keys.zip(values)]
 
         unless data["StartTime"].nil?
-          data["StartTime"] = format_datetime(data["StartTime"])
+          start_time = Time.parse(data['StartTime'])
+          data['ElapsedTime'] = (Time.now - start_time).to_i
+          data["StartTime"] = start_time.to_s
         end
 
         data
@@ -181,10 +183,6 @@ module Fluent::Plugin
       end
 
       private
-
-      def format_datetime(datetime)
-        Time.parse(datetime).to_s
-      end
 
       def pipe_filtering_normal_ps
         # There are some special processes that don't have some properties, such as the "Idle" process.

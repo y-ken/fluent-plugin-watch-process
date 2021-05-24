@@ -44,7 +44,7 @@ class WatchProcessInputTest < Test::Unit::TestCase
         tag input.watch_process
         interval 1s
       ]
-      default_keys = Fluent::Plugin::WatchProcessInput::WindowsWatcher::DEFAULT_KEYS
+      default_keys = Fluent::Plugin::WatchProcessInput::WindowsWatcher::DEFAULT_KEYS + ["ElapsedTime"]
 
       d.run(expect_records: 1, timeout: 10);
 
