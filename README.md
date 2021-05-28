@@ -114,6 +114,14 @@ powershell -command "Get-Process -IncludeUserName
  | ConvertTo-Csv -NoTypeInformation"
 `````
 
+Confirmed versions are:
+
+|  Windows version               |  PowerShell version information                                           | Note                                          |
+| ------------------------------ | ------------------------------------------------------------------------- |-----------------------------------------------|
+|  Windows 10 10.0.19042 (20H2)  |  PSVersion: 5.1.19041.906 (default installed version), PSEdition: Desktop | `powershell_command` as `powershell` (default)|
+|  Windows 10 10.0.19042 (20H2)  |  PSVersion: 7.1.2, PSEdition: Core                                        | `powershell_command` as `pwsh`                |
+
+
 Here are details of this default command.
 
 * `Get-Process -IncludeUserName`
