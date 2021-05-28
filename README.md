@@ -103,7 +103,8 @@ $ tail -f /var/log/td-agent/td-agent.log
 
 ### About Windows
 
-Default `command` in Windows below is complicated, but you can fix `keys` without fixing `command`, unless you specify a key other than the default.
+Default `command` preset for Windows provides many of keys as below. Generally, you can pick up the columns with `keys` option.
+If you need additional keys, consider to update `command` option.
 
 `````powershell
 powershell -command "Get-Process -IncludeUserName
