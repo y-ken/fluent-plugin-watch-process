@@ -96,6 +96,11 @@ $ tail -f /var/log/td-agent/td-agent.log
   * to use short hostname, set `hostname -s` for this option on linux/mac.
   * [default] `hostname`
 
+* powershell_command (Optional)
+  * settings for powershell command name. PowerShell Core had been renamed its command to `pwsh` and PowerShell 7 continues to use `pwsh` as its command name.
+  * [default] `powershell`
+  * [avaliables] `powershell`, `pwsh`
+
 ### About Windows
 
 Default `command` in Windows below is complicated, but you can fix `keys` without fixing `command`, unless you specify a key other than the default.
@@ -127,6 +132,8 @@ Here are details of this default command.
   * this formats objects to csv strings.
   * currently, it is needed that `command` outputs the results in csv format.
     * this is because white space delimiter is not suitable for Windows, in which empty values are often mixed.
+
+**Note:** When using with PowerShell 7 which is previously known as PowerShell Core, you must specify `powershell_command` parameter as `pwsh`. Otherwise, this plugin does not work correctly on PowerShell 7 (pwsh). This is because PowerShell Core and PowerShell 7 use different command name which is `pwsh` not `powershell`.
 
 ## FAQ
 
