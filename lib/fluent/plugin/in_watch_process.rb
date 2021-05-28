@@ -26,6 +26,7 @@ module Fluent::Plugin
     config_param :interval, :time, :default => '5s'
     config_param :lookup_user, :array, :default => nil
     config_param :hostname_command, :string, :default => 'hostname'
+    config_param :powershell_command, :enum, list: [:powershell, :pwsh], :default => :powershell
 
     include Fluent::HandleTagNameMixin
     include Fluent::Mixin::RewriteTagName
@@ -38,7 +39,7 @@ module Fluent::Plugin
     def configure(conf)
       super
 
-      @windows_watcher = WindowsWatcher.new(@keys, @command, @lookup_user) if Fluent.windows?
+      @windows_watcher = WindowsWatcher.new(@keys, @command, @lookup_user, @powershell_command) if Fluent.windows?
       @keys ||= Fluent.windows? ? @windows_watcher.keys : DEFAULT_KEYS
       @command ||= get_ps_command
       apply_default_types
@@ -133,8 +134,9 @@ module Fluent::Plugin
       attr_reader :keys
       attr_reader :command
 
-      def initialize(keys, command, lookup_user)
+      def initialize(keys, command, lookup_user, powershell_command)
         @keys = keys || DEFAULT_KEYS
+        @powershell_command = powershell_command
         @command = command || default_command
         @lookup_user = lookup_user
       end
@@ -170,7 +172,7 @@ module Fluent::Plugin
           pipe_fixing_locale,
           pipe_formatting_output,
         ].join
-        "powershell -command \"#{command}\""
+        "#{@powershell_command} -command \"#{command}\""
       end
 
       def command_ps

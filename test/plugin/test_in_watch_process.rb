@@ -23,6 +23,19 @@ class WatchProcessInputTest < Test::Unit::TestCase
     ]
     assert_equal 'input.watch_process', d.instance.tag
     assert_equal ['apache', 'mycron'], d.instance.lookup_user
+    assert_equal :powershell, d.instance.powershell_command
+  end
+
+  def test_windows_configure
+    omit "Only for UNIX like." unless Fluent.windows?
+    d = create_driver %[
+      tag          input.watch_process
+      lookup_user  apache, mycron
+      powershell_command pwsh
+    ]
+    assert_equal 'input.watch_process', d.instance.tag
+    assert_equal ['apache', 'mycron'], d.instance.lookup_user
+    assert_equal :pwsh, d.instance.powershell_command
   end
 
   def test_unixlike
