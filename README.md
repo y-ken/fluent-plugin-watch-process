@@ -68,14 +68,20 @@ $ tail -f /var/log/td-agent/td-agent.log
   * execute ps command with some options
   * [default] Linux: `LANG=en_US.UTF-8 && ps -ewwo lstart,user:20,pid,ppid,time,%cpu,%mem,rss,sz,s,comm,cmd`
   * [default] MacOSX: `LANG=en_US.UTF-8 && ps -ewwo lstart,user,pid,ppid,time,%cpu,%mem,rss,vsz,state,comm,command`
+  * [default] Windows: described in the next section, `About Windows`.
 
 * keys (Optional)
   * output record keys of the ps command results
-  * [default] start_time user pid parent_pid cpu_time cpu_percent memory_percent mem_rss mem_size state proc_name command
+  * [default] Linux, MacOSX: `start_time,user,pid,parent_pid,cpu_time,cpu_percent,memory_percent,mem_rss,mem_size,state,proc_name,command`
+    * need to modify `command` too if you modify this value.
+  * [default] Windows: `StartTime,UserName,SessionId,Id,CPU,WorkingSet,VirtualMemorySize,HandleCount,ProcessName`
+    * in Windows only, you can fix this without fixing `command`. These keys can be specified from the properties of `System.Diagnostics.Process` object of `.NET`.
+    * `UserName` key needs administrator privilege. You can exclude this to avoid needing administrator privilege.
 
 * types (Optional)
   * settings of converting types from string to integer/float.
-  * [default] pid:integer parent_pid:integer cpu_percent:float memory_percent:float mem_rss:integer mem_size:integer
+  * [default] Linux, MacOSX: `pid:integer,parent_pid:integer,cpu_percent:float,memory_percent:float,mem_rss:integer,mem_size:integer`
+  * [default] Windows: `SessionId:integer,Id:integer,CPU:float,WorkingSet:integer,VirtualMemorySize:integer,HandleCount:integer`
 
 * interval (Optional)
   * execute interval time
@@ -89,6 +95,54 @@ $ tail -f /var/log/td-agent/td-agent.log
   * settings for tag placeholder, `${hostname}` and `__HOSTNAME__`. By default, it using long hostname.
   * to use short hostname, set `hostname -s` for this option on linux/mac.
   * [default] `hostname`
+
+* powershell_command (Optional)
+  * settings for powershell command name. PowerShell Core had been renamed its command to `pwsh` and PowerShell 7 continues to use `pwsh` as its command name.
+  * [default] `powershell`
+  * [avaliables] `powershell`, `pwsh`
+
+### About Windows
+
+Default `command` preset for Windows provides many of keys as below. Generally, you can pick up the columns with `keys` option.
+If you need additional keys, consider to update `command` option.
+
+`````powershell
+powershell -command "Get-Process -IncludeUserName
+ | ?{$_.StartTime -ne $NULL -and $_.CPU -ne $NULL}
+ | Select-Object -Property StartTime,UserName,SessionId,Id,CPU,WorkingSet,VirtualMemorySize,HandleCount,ProcessName
+ | %{$_.StartTime = $_.StartTime.ToString('o'); return $_;}
+ | ConvertTo-Csv -NoTypeInformation"
+`````
+
+Confirmed versions are:
+
+|  Windows version               |  PowerShell version information                                           | Note                                          |
+| ------------------------------ | ------------------------------------------------------------------------- |-----------------------------------------------|
+|  Windows 10 10.0.19042 (20H2)  |  PSVersion: 5.1.19041.906 (default installed version), PSEdition: Desktop | `powershell_command` as `powershell` (default)|
+|  Windows 10 10.0.19042 (20H2)  |  PSVersion: 7.1.2, PSEdition: Core                                        | `powershell_command` as `pwsh`                |
+
+
+Here are details of this default command.
+
+* `Get-Process -IncludeUserName`
+  * `Get-Process` powershell command takes `System.Diagnostics.Process` objects.
+  * `IncludeUserName` option is needed to take `UserName`.
+    * this needs administrator privilege.
+    * this will be omitted if `keys` does not contain `UserName`.
+* ` | ?{$_.StartTime -ne $NULL -and $_.CPU -ne $NULL}`
+  * this exlcludes some special processes that don't have some properties, such as the "Idle" process in Windows.
+* ` | Select-Object -Property ...`
+  * this takes the necessary parameters from `System.Diagnostics.Process` objects.
+  * `...` part will be automatically fixed by `keys`.
+* ` | %{$_.StartTime = $_.StartTime.ToString('o'); return $_;}`
+  * this fixes the format of `StartTime` value.
+  * note: in Windows, setting the "$env:Lang" environment variable is not effective in changing the format of the output.
+* ` | ConvertTo-Csv -NoTypeInformation`
+  * this formats objects to csv strings.
+  * currently, it is needed that `command` outputs the results in csv format.
+    * this is because white space delimiter is not suitable for Windows, in which empty values are often mixed.
+
+**Note:** When using with PowerShell 7 which is previously known as PowerShell Core, you must specify `powershell_command` parameter as `pwsh`. Otherwise, this plugin does not work correctly on PowerShell 7 (pwsh). This is because PowerShell Core and PowerShell 7 use different command name which is `pwsh` not `powershell`.
 
 ## FAQ
 
