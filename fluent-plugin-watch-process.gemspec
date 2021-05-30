@@ -3,11 +3,11 @@ $:.push File.expand_path("../lib", __FILE__)
 
 Gem::Specification.new do |s|
   s.name        = "fluent-plugin-watch-process"
-  s.version     = "0.1.1"
+  s.version     = "0.2.0"
   s.authors     = ["Kentaro Yoshida"]
   s.email       = ["y.ken.studio@gmail.com"]
   s.homepage    = "https://github.com/y-ken/fluent-plugin-watch-process"
-  s.summary     = %q{Fluentd Input plugin to collect continual process information via ps command. It is useful for cron/barch process monitoring.}
+  s.summary     = %q{Fluentd Input plugin to collect continual process information via ps command or PowerShell pwsh command for Linux/osx/Windows. It is useful for cron/barch process monitoring.}
 
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
